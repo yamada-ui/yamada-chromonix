@@ -126,3 +126,13 @@ class InputGenerator(keras.utils.Sequence):
         mask_class = (batch_token_id * unmask).astype(int)
         
         return token_id_masked, mask_position, mask_class
+    
+    def segment(self, token_id):
+        segment = []
+        
+        for i in range(len(token_id)):
+            sample_segment = [0, 0, 0, 0, 0, 0]
+            segment.append(sample_segment)
+        segment = np.array(segment)
+        
+        return segment
