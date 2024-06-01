@@ -136,3 +136,24 @@ class InputGenerator(keras.utils.Sequence):
         segment = np.array(segment)
         
         return segment
+    
+    def padding_mask(self, token_id):
+        mask = (np.array(token_id) != self.corpus.tokenizer.pad_token_id).astype(int)
+        return mask
+    
+    def text_embeddings(self, index):
+        text_input_embeddings = []
+        for i in range(self.batch_size):
+            for j in range(self.config["max_text_length"]):
+                text_input_embeddings.append(self.text_input_embeddings[index * self.batch_size + i * self.config["max_text_length"] + j])
+        text_input_embeddings = np.array(text_input_embeddings)
+        return text_input_embeddings
+    
+    def __getitem__(self, index):
+        batch_token_id = self.data[index * self.batch_size : (index + 1) * self.batch_size]
+        token_id_masked, mask_position, mask_class = self.mask
+        segment = self.segment(batch_token_id)
+        padding_mask = self.padding_mask(batch_token_id)
+        text_input_embeddings = self.text_embeddings(index)
+        
+        return [token_id_masked, segment, padding_mask, text_input_embeddings], mask_class
