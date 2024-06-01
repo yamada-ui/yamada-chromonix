@@ -1,10 +1,11 @@
 import os
 import random
 from collections import Counter
-import numpy as np
-import tensorflow as tf
+
 import keras
-from transformers import BertTokenizer, TFBertModel
+import numpy as np
+from transformers import BertTokenizer
+
 
 class Tokenizer:
     def __init__(self, vocab_path):
@@ -14,10 +15,11 @@ class Tokenizer:
 
     def encode(self, text):
         return self.tokenizer.encode(text, add_special_tokens=False)
-    
+
     def decode(self, ids):
         return self.tokenizer.decode(ids, skip_special_tokens=True)
-    
+
+
 class Corpus:
     def __init__(self, config, tokenizer):
         self.config = config
@@ -26,7 +28,7 @@ class Corpus:
 
     def gen_vocab(self):
         if not os.path.exists(self.tokenizer.vocab_path):
-            with open(self.config["corpus_path"], "r", encoding="UTF-8") as f:
+            with open(self.config["corpus_path"], encoding="UTF-8") as f:
                 corpus = f.read()
             vocab_with_freq = Counter(corpus).most_common()
             vocab = [char for (char, freq) in vocab_with_freq if freq >= self.config["charactor_freq_threshold"]]
@@ -36,21 +38,21 @@ class Corpus:
 
     # make and parse
     def passages(self):
-        with open(self.config["corpus_path"], "r", encoding="UTF-8") as f:
+        with open(self.config["corpus_path"], encoding="UTF-8") as f:
             corpus = f.read()
-        
+
         for line in corpus:
             yield line.replace('"', "")
-        
+
     def color(self):
         passages = self.passages()
 
         for passage in passages:
-            sentence = passage.strip('\n').split(' ; ')
+            sentence = passage.strip("\n").split(" ; ")
             sample = []
             for i in range(len(sentence)):
                 sample.extend(self.tokenizer.encode(sentence[i]))
-            
+
                 if i < self.config["max_palette_length"]:
                     sample.extend([self.tokenizer.vocab["[PAD]"]] * (self.config["max_palette_length"] - i))
 
@@ -58,23 +60,24 @@ class Corpus:
 
     def token_id_to_list(self):
         return [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in self.data]
-    
+
+
 class TextEmbedding:
     def text_embeddings(self, file_path):
-        with open(file_path, 'r', encoding='UTF-8') as f:
+        with open(file_path, encoding="UTF-8") as f:
             text = f.readlines()
         for line in text:
-            yield line
-            
+            yield from line
+
     def text(self, config):
         text_embeddings = []
         text = self.text_embeddings(config["text_embeddings_path"])
         for line in text:
-            text_embeddings.append(float(conf) for conf in line.split(' '))
-            
+            text_embeddings = [float(conf) for conf in line.split(" ")]
+
         return text_embeddings
-            
-                
+
+
 class InputGenerator(keras.utils.Sequence):
     def __init__(self, config, tokenizer):
         self.config = config
@@ -86,74 +89,73 @@ class InputGenerator(keras.utils.Sequence):
         self.text_input_embeddings = self.text_embeddings.text(config)
         self.batch_size = self.config["batch_size"]
         self.mask_token_id = tokenizer.tokenizer.mask_token_id
-        
+
     def __len__(self):
         return len(self.data) // self.batch_size
-    
+
     def mask_tokens(self, batch_token_id):
         batch_size = len(batch_token_id)
         ignroe_pad = (np.array(batch_token_id) != self.corpus.tokenizer.pad_token_id).astype(int)
         ignore_sep = (np.array(batch_token_id) != self.corpus.tokenizer.sep_token_id).astype(int)
         batch_ignore = (ignroe_pad * ignore_sep).astype(int)
-        
-        
+
         seq_len = np.sum(batch_ignore, axis=1)
         mask_word = np.ceil(seq_len * self.config["mask_rate"]).astype(int)
         mask_position = []
-        
+
         for i in range(batch_size):
             seq = [index for index, value in enumerate(batch_ignore[i]) if value >= 1]
-            
+
             if len(self.config["mask_position"]) == 0:
-                if random.random() < self.config["mask_position"]:
+                if random.SystemRandom() < self.config["mask_position"]:
                     position = np.random.choice(seq, mask_word[i], replace=False)
-                
+
                 else:
                     position = []
             elif self.config["mask_position"] == "random":
-                position = np.random.choice(seq, self.config["mask_num"] if self.config["mask_num"] < len(seq) else len(seq), replace=False)
+                position = np.random.choice(
+                    seq, self.config["mask_num"] if self.config["mask_num"] < len(seq) else len(seq), replace=False
+                )
             else:
                 position = self.config["mask_position"]
             mask_position.append(np.sum(np.eye(self.config["max_seq_length"])[position], axis=0))
-            
+
         mask_position = np.array(mask_position)
-        
+
         mask_value = mask_position * self.mask_token_id
         mask = (mask_position == 0).astype(int)
         token_id_masked = (batch_token_id * mask + mask_value).astype(int)
-        
+
         unmask = (mask_position == 1).astype(int)
         mask_class = (batch_token_id * unmask).astype(int)
-        
+
         return token_id_masked, mask_position, mask_class
-    
+
     def segment(self, token_id):
         segment = []
-        
-        for i in range(len(token_id)):
+
+        for _ in range(len(token_id)):
             sample_segment = [0, 0, 0, 0, 0, 0]
             segment.append(sample_segment)
-        segment = np.array(segment)
-        
-        return segment
-    
+        return np.array(segment)
+
     def padding_mask(self, token_id):
-        mask = (np.array(token_id) != self.corpus.tokenizer.pad_token_id).astype(int)
-        return mask
-    
+        return (np.array(token_id) != self.corpus.tokenizer.pad_token_id).astype(int)
+
     def text_embeddings(self, index):
         text_input_embeddings = []
         for i in range(self.batch_size):
-            for j in range(self.config["max_text_length"]):
-                text_input_embeddings.append(self.text_input_embeddings[index * self.batch_size + i * self.config["max_text_length"] + j])
-        text_input_embeddings = np.array(text_input_embeddings)
-        return text_input_embeddings
-    
+            text_input_embeddings = [
+                self.text_input_embeddings[index * self.batch_size + i * self.config["max_text_length"] + j]
+                for j in range(self.config["max_text_length"])
+            ]
+        return np.array(text_input_embeddings)
+
     def __getitem__(self, index):
         batch_token_id = self.data[index * self.batch_size : (index + 1) * self.batch_size]
         token_id_masked, mask_position, mask_class = self.mask
         segment = self.segment(batch_token_id)
         padding_mask = self.padding_mask(batch_token_id)
         text_input_embeddings = self.text_embeddings(index)
-        
+
         return [token_id_masked, segment, padding_mask, text_input_embeddings], mask_class
