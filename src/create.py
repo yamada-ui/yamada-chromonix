@@ -32,6 +32,12 @@ def save_text_embedding(inputs, data_path, text_object, data_type):
             text_embedding = text_feature.cpu().numpy()
             with open(f"{data_path}/{text_object}_embedding_{data_type}.txt", "a") as f:
                 np.savetxt(f, text_embedding)
-
+                
+def parse_text(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = f.readlines()
+    for line in data:
+        yield line
+        
 
 # Create text embedding
