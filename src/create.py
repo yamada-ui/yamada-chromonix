@@ -3,6 +3,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+dataTypes = ["train", "test", "val"]
 
 # output text embedding
 def save_text_embedding(inputs, data_path, text_object, data_type):
@@ -39,5 +40,17 @@ def parse_text(file_path):
     for line in data:
         yield line
         
+def text_data(file_path, dataType):
+    text_input = []
+    
+    text_data = parse_text(file_path)
+    for tc in text_data:
+        contents = tc.split('\t')
+        contents = [c.replace("\n", "") for c in contents]
+        text_input.append(contents)
+    
+    data_path = os.path.dirname(file_path)
+    save_text_embedding(text_input, data_path, "text", dataType)
+
 
 # Create text embedding
