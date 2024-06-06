@@ -1,7 +1,9 @@
 import os
-
+import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import ast
+import math
 
 dataTypes = ["train", "test", "val"]
 
@@ -53,4 +55,14 @@ def text_data(file_path, dataType):
     save_text_embedding(text_input, data_path, "text", dataType)
 
 
-# Create text embedding
+def get_color_list_bins(data, columns):
+    bin_range = 16
+    color_hist = ''
+    for column in columns:
+        if pd.notna(data[columns]):
+            colors = ast.literal_eval(data[column])
+            for color in colors:
+                color_hist += color + ' '
+                color_hist += f'{math.floor(color[0]/bin_range)}_{math.floor(color[1]/bin_range)}_{math.floor(color[2]/bin_range)}'
+                
+    return color_hist
