@@ -6,6 +6,13 @@ import ast
 import math
 
 dataTypes = ["train", "test", "val"]
+reresantation = "lab_bin_16"
+bin_range = 16
+
+rawdata = "../data/colors"
+colordata = "../data/color"
+textmodel = "_clip"
+embedding_file = "embedding_clip"
 
 # output text embedding
 def save_text_embedding(inputs, data_path, text_object, data_type):
@@ -84,4 +91,5 @@ def color_data(path, dataType):
     metadata["color_hist"] = metadata["pakette_lab_reorder"]
     
     return metadata
+
     
