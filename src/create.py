@@ -66,3 +66,9 @@ def get_color_list_bins(data, columns):
                 color_hist += f'{math.floor(color[0]/bin_range)}_{math.floor(color[1]/bin_range)}_{math.floor(color[2]/bin_range)}'
                 
     return color_hist
+
+def get_color_metadata(data, represantation):
+    for column in ["pakette_lab_reorder"]:
+        data[column] = data[column].apply(lambda x: get_color_list_bins(x, [column]))
+        
+    return data
