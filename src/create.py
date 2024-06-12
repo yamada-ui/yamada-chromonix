@@ -72,3 +72,8 @@ def get_color_metadata(data, represantation):
         data[column] = data[column].apply(lambda x: get_color_list_bins(x, [column]))
         
     return data
+
+def color_hist(data, dataType):
+    data = get_color_metadata(data, "pakette_lab_reorder")
+    data_path = os.path.dirname(data_path)
+    save_text_embedding(data, data_path, "color", dataType)
