@@ -77,3 +77,11 @@ def color_hist(data, dataType):
     data = get_color_metadata(data, "pakette_lab_reorder")
     data_path = os.path.dirname(data_path)
     save_text_embedding(data, data_path, "color", dataType)
+    
+def color_data(path, dataType):
+    data = pd.read_csv(path)
+    metadata = get_color_metadata(data, dataType)
+    metadata["color_hist"] = metadata["pakette_lab_reorder"]
+    
+    return metadata
+    
